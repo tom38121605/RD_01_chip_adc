@@ -1,0 +1,68 @@
+
+
+//快速命令
+#define FASTCMD_UNUSE          ((DEVICE_ADDRESS<<DEVICE_ADDR_POS) | (0x00<<COMMAND_ADDR_POS) | 0x00)   //01000000
+#define FASTCMD_ADCSTART       ((DEVICE_ADDRESS<<DEVICE_ADDR_POS) | (0x0A<<COMMAND_ADDR_POS) | 0x00)   //01101000
+#define FASTCMD_STANDBY        ((DEVICE_ADDRESS<<DEVICE_ADDR_POS) | (0x0B<<COMMAND_ADDR_POS) | 0x00)   //01101100
+#define FASTCMD_SHUTDOWN       ((DEVICE_ADDRESS<<DEVICE_ADDR_POS) | (0x0C<<COMMAND_ADDR_POS) | 0x00)   //01110000
+#define FASTCMD_FULLSHUTDOWN   ((DEVICE_ADDRESS<<DEVICE_ADDR_POS) | (0x0D<<COMMAND_ADDR_POS) | 0x00)   //01110100
+#define FASTCMD_RESET          ((DEVICE_ADDRESS<<DEVICE_ADDR_POS) | (0x0E<<COMMAND_ADDR_POS) | 0x00)   //01111000
+
+
+
+功能：选择内部时钟并输出MCLK到引脚，ADC的工作模式初始为关断模式
+      预分频为1，过采样率为OSR256，增益为1
+      连续转换模式，32位数据，禁止crc，使能数字失调校准,使能数字增益校准
+      三个中断标志置1(新adc数据，crc错误，POR中断)，选择在引脚输出irq，无效状态为高阻(需加上拉),使能快速指令，使能irq输出到引脚
+      选择 CH0-CH1通道
+
+const u8 mcp3564_config[12]=      
+{                        
+    0x30,     //config0：bit5-4=11，bit3-2=00，bit1-0=00，选择内部时钟并输出MCLK到引脚，没有拉电流，ADC的工作模式初始为关断模式     //ok
+
+    0x0C,     //config1：bit7-6=00，bit5-2=0011，预分频为1，过采样率为OSR256             //ok
+
+    0x8B,     //config2：bit7-6=10，bit5-3=001，bit2=0，1x电流，增益为1，禁止adc自动调0算法（待理解--先忽略）     //ok
+
+    0xF3,     //config3：bit7-6=11，bit5-4=11，bit2,1,0= 0,1,1，连续转换模式，32位数据，禁止crc，使能数字失调校准,使能数字增益校准      //ok   
+
+    0x73,     //IRQ：bit6,5,4 = 1,1,1, bit3,2=0,0，bit1,0=1,1,  中断标志之新adc数据，crc错误，POR中断，选择在引脚输出irq，无效状态为高阻(需加上拉),使能快速指令，使能irq输出到引脚
+
+    0x01,             //MCP3561只能选择 CH0-CH1通道   //ok
+ 
+    0xE0,0x00,0xFF,   //SCAN：512个DMCLK间隔，选择扫描模式下的通道位none
+
+    0x00,0x00,0x00,   //timer：无延时
+
+}; 
+
+
+typedef struct
+{
+    u8 config0;
+    u8 config1;
+    u8 config2;
+    u8 config3;
+    u8 irp;
+    u8 mux;
+    u8 scan[3];
+    u8 timer[3];
+    u8 offsetcal[3];
+    u8 gaincal[3];
+    u8 reserved1[3];
+    u8 reserved2;
+    u8 lock;
+    u8 reserved3[2];
+    u8 crccfg[2];
+}_mcp3564_config;
+
+
+
+typedef struct
+{
+    u8 status;
+    u8 adcdata[4];    //3564返回的adc原始数据
+}_mcp3564_data;
+
+
+

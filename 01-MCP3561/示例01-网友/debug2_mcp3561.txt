@@ -1,0 +1,149 @@
+
+
+========================================= MCP3561 init配置 ============================================
+
+main 
+
+    //从器件01的芯片，里面的寄存器01开始读数据，一共读27个字节的数据
+    MCP3564_Read(&MCP3564_Config.config0,IREAD_CONFIG, 27);
+
+
+    //设置config，在器件01的芯片，往里面的寄存器01开始写数据，一共写12个字节的数据
+    //MCP3564_SendConfig();
+      MCP3564_Write(mcp3564_config, CONFIG0_WRITE, 12);
+
+
+
+
+------------------------
+
+功能：从器件01的芯片，里面的寄存器01开始读数据，一共读27个字节的数据
+      保存到结构体的config0数组里面
+
+参数：MCP3564_Config.config0,IREAD_CONFIG, 27     //IREAD_CONFIG = 01 00  01  11
+MCP3564_Read( pBuffer,  Cmd, NumByteToRead)
+  
+    MCP3564_CS_LOW();
+
+    MCP3564_SendByte(Cmd);    //从寄存器01开始读数据，一共读27个字节的数据
+
+    while (NumByteToRead--)
+
+        *pBuffer = MCP3564_SendByte(Dummy_Byte);   //读27次
+        pBuffer++;
+    
+    MCP3564_CS_HIGH();
+
+
+------------------------
+
+功能：在器件01的芯片，往里面的寄存器01开始写数据，一共写12个字节的数据
+
+参数：mcp3564_config, CONFIG0_WRITE, 12       //CONFIG0_WRITE = 01 00 01 10
+MCP3564_Write( pBuffer,  Cmd,  NumByteToWrite)
+
+    MCP3564_CS_LOW();
+    
+    MCP3564_SendByte(Cmd);
+
+    while (NumByteToWrite--)
+    
+        MCP3564_SendByte(*pBuffer);
+        pBuffer++;
+    
+
+    MCP3564_CS_HIGH();
+
+
+
+
+========================================= MCP3561 读数据 ============================================
+
+
+main 
+
+   //启动adc转换
+   //MCP3564_FastCMD(FASTCMD_ADCSTART);
+      MCP3564_SendByte(FASTCMD_ADCSTART);   // bit7-6=01，bit5-2=1010，bit1-0=00， 器件地址01，启动adc转换
+
+
+   while
+
+      //读取status，看bit是否为0，为0则表示有新adc数据
+      //AAA = MCP3564_GetStatus()；
+         AAA =MCP3564_SendByte(FASTCMD_UNUSE);  //0B0100 0000
+
+      //读取adc数据
+      if( !( AAA &0x04) )	//有新的adcdata
+
+          MCP3564_Read(MCP3564_Data.adcdata,IREAD_COMMAND,4);
+
+
+
+
+---------------
+
+
+功能：从器件01的芯片，里面的ADCDATA开始读数据，一共读4个字节的数据
+      保存到结构体的adcdata数组里面
+
+参数：MCP3564_Data.adcdata,IREAD_COMMAND,4     //IREAD_COMMAND = 01 00  00  11
+MCP3564_Read( pBuffer,  Cmd,  NumByteToRead)
+     
+    MCP3564_CS_LOW();
+
+    MCP3564_SendByte(Cmd);
+
+    while (NumByteToRead--)
+     
+        *pBuffer = MCP3564_SendByte(Dummy_Byte);     //读4次
+        pBuffer++;
+     
+    
+    MCP3564_CS_HIGH();
+ 
+
+
+
+
+========================================= MCP3561 读status ============================================
+
+
+
+main 
+
+
+   while
+
+      AAA = MCP3564_GetStatus();
+
+      if( !(AAA & 0x04) == 0 )    //有DR数据到来  (0表示有数据产生)
+          ......
+
+
+--------------------
+
+
+功能：往器件01的芯片，发送cmd为00的无效指令，就会返回status
+
+MCP3564_GetStatus( )
+
+    u8 status=0;
+    
+    MCP3564_CS_LOW();
+
+    status=MCP3564_SendByte(FASTCMD_UNUSE);    //01 00 00  00 ， 读取器件01的status //主要看后面两位cmd为00
+
+    MCP3564_CS_HIGH();
+    
+    return status;
+
+
+
+
+
+
+
+
+
+
